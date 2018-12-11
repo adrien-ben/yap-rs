@@ -1,6 +1,6 @@
-use game::input::*;
+use crate::game::input::*;
 use graphics::{Context, ellipse, Graphics, rectangle, Transformed};
-use math::*;
+use crate::math::*;
 use num;
 use rand::random;
 

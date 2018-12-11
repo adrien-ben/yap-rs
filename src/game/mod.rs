@@ -1,8 +1,8 @@
-use game::entities::*;
-use game::input::*;
+use crate::game::entities::*;
+use crate::game::input::*;
 use graphics::{Context, Graphics, text, Transformed};
 use graphics::character::CharacterCache;
-use math::*;
+use crate::math::*;
 use piston::input::{Button, Key, UpdateArgs};
 
 mod input;
