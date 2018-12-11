@@ -1,9 +1,3 @@
-extern crate glutin_window;
-extern crate graphics;
-extern crate opengl_graphics;
-extern crate piston;
-extern crate pong;
-
 use glutin_window::GlutinWindow as Window;
 use graphics::clear;
 use opengl_graphics::{GlGraphics, GlyphCache, OpenGL, TextureSettings};

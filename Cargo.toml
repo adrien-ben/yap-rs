@@ -2,6 +2,7 @@
 name = "pong"
 version = "0.1.0"
 authors = ["Adrien Bennadji <adrien.bennadji@live.fr>"]
+edition = "2018"
 
 [dependencies]
 piston = "0.37.0"
