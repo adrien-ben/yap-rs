@@ -1,15 +1,17 @@
 use num;
-use std::ops::Add;
-use std::ops::AddAssign;
-use std::ops::Mul;
+use std::ops::{Add, AddAssign, Mul};
 
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Default)]
 pub struct Vector {
     pub x: f64,
     pub y: f64,
 }
 
 impl Vector {
+    pub fn new(x: f64, y: f64) -> Self {
+        Vector {x, y}
+    }
+
     pub fn length(self) -> f64 {
         (self.x * self.x + self.y * self.y).sqrt()
     }
