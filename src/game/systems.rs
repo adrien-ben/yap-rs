@@ -11,7 +11,7 @@ const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const TEXT_COLOR: [f32; 4] = [0.7, 0.7, 0.7, 1.0];
 const TEXT_SIZE: u32 = 18;
 
-pub const BALL_DEFAULT_SPEED: f64 = 300.0;
+pub const BALL_DEFAULT_SPEED: f64 = 0.5;
 
 pub struct InputUpdate;
 
@@ -106,7 +106,6 @@ pub struct OutOfBound;
 
 impl<'a> System<'a> for OutOfBound {
     type SystemData = (
-        ReadExpect<'a, GameArea>,
         Read<'a, GameState>,
         WriteStorage<'a, Position>,
         ReadStorage<'a, Ball>,
@@ -114,34 +113,31 @@ impl<'a> System<'a> for OutOfBound {
         WriteStorage<'a, Velocity>,
     );
 
-    fn run(
-        &mut self,
-        (area, state, mut positions, balls, paddles, mut velocities): Self::SystemData,
-    ) {
+    fn run(&mut self, (state, mut positions, balls, paddles, mut velocities): Self::SystemData) {
         if let GameState(State::Idle) = *state {
             return;
         }
 
         for (position, ball, velocity) in (&mut positions, &balls, &mut velocities).join() {
-            if position.current.x - ball.size < 0.0 || position.current.x + ball.size > area.width {
-                if position.current.x - ball.size < 0.0 {
-                    position.current.x = ball.size;
+            if position.current.x - ball.size * 0.5 < 0.0 || position.current.x + ball.size * 0.5 > 1.0 {
+                if position.current.x + ball.size * 0.5 < 0.0 {
+                    position.current.x = ball.size * 0.5;
                 }
-                if position.current.x + ball.size > area.width {
-                    position.current.x = area.width - ball.size;
+                if position.current.x - ball.size * 0.5 > 1.0 {
+                    position.current.x = 1.0 - ball.size * 0.5;
                 }
                 velocity.direction.x *= -1.0;
             }
         }
         for (position, paddle, velocity) in (&mut positions, &paddles, &mut velocities).join() {
-            if position.current.x + paddle.bound.bottom_left.x < 0.0
-                || position.current.x + paddle.bound.top_right.x > area.width
+            if position.current.x + paddle.bound.top_right.x < 0.0
+                || position.current.x + paddle.bound.bottom_left.x > 1.0
             {
-                if position.current.x + paddle.bound.bottom_left.x < 0.0 {
+                if position.current.x + paddle.bound.top_right.x < 0.0 {
                     position.current.x = -paddle.bound.bottom_left.x;
                 }
-                if position.current.x + paddle.bound.top_right.x > area.width {
-                    position.current.x = area.width - paddle.bound.top_right.x;
+                if position.current.x + paddle.bound.bottom_left.x > 1.0 {
+                    position.current.x = 1.0 - paddle.bound.top_right.x;
                 }
                 velocity.direction.x *= -1.0;
             }
@@ -293,10 +289,16 @@ impl<'a, 'b> System<'a> for Render<'b> {
                 for (position, ball) in (&positions, &balls).join() {
                     ellipse(
                         WHITE,
-                        [-ball.size * 0.5, -ball.size * 0.5, ball.size, ball.size],
-                        context
-                            .transform
-                            .trans(position.current.x, area.height - position.current.y),
+                        [
+                            -ball.size * 0.5 * area.width,
+                            -ball.size * 0.5 * area.height,
+                            ball.size * area.width,
+                            ball.size * area.width,
+                        ],
+                        context.transform.trans(
+                            position.current.x * area.width,
+                            (1.0 - position.current.y) * area.height,
+                        ),
                         graphics,
                     );
                 }
@@ -305,21 +307,24 @@ impl<'a, 'b> System<'a> for Render<'b> {
                     rectangle(
                         WHITE,
                         [
-                            paddle.bound.bottom_left.x,
-                            paddle.bound.bottom_left.y,
-                            paddle.bound.width(),
-                            paddle.bound.height(),
+                            paddle.bound.bottom_left.x * area.width,
+                            paddle.bound.bottom_left.y * area.height,
+                            paddle.bound.width() * area.width,
+                            paddle.bound.height() * area.height,
                         ],
-                        context
-                            .transform
-                            .trans(position.current.x, area.height - position.current.y),
+                        context.transform.trans(
+                            position.current.x * area.width,
+                            (1.0 - position.current.y) * area.height,
+                        ),
                         graphics,
                     );
                 }
 
                 for score in (&scores).join() {
-                    let text_transform =
-                        context.transform.trans(score.position.x, score.position.y);
+                    let text_transform = context.transform.trans(
+                        score.position.x * area.width,
+                        (1.0 - score.position.y) * area.height,
+                    );
                     text(
                         TEXT_COLOR,
                         TEXT_SIZE,
