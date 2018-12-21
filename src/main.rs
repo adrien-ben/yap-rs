@@ -11,8 +11,8 @@ use pong::math::{Rectangle, Vector};
 use rand::random;
 use specs::prelude::*;
 
-const WIDTH: u32 = 400;
-const HEIGHT: u32 = 600;
+const WIDTH: u32 = 200;
+const HEIGHT: u32 = 300;
 
 fn main() {
     let open_gl = OpenGL::V3_2;
@@ -51,38 +51,38 @@ fn main() {
     // ball
     world
         .create_entity()
-        .with(Position::new(WIDTH as f64 * 0.5, HEIGHT as f64 * 0.5))
+        .with(Position::new(0.5, 0.5))
         .with(Velocity {
             direction: Vector::new(random::<f64>() * 2.0 - 1.0, random::<f64>() * 10.0 - 5.0)
                 .normalize(),
             speed: BALL_DEFAULT_SPEED,
-            max_speed: 1200.0,
+            max_speed: 2.0,
         })
-        .with(Ball { size: 20.0 })
+        .with(Ball { size: 0.05 })
         .build();
 
     // top paddle
     world
         .create_entity()
-        .with(Position::new(WIDTH as f64 * 0.5, HEIGHT as f64 - 15.0))
-        .with(Velocity::new(Default::default(), 220.0))
+        .with(Position::new(0.5, 0.975))
+        .with(Velocity::new(Default::default(), 0.55))
         .with(Paddle {
-            bound: Rectangle::new(Vector::new(-50.0, -15.0), Vector::new(50.0, 15.0)),
+            bound: Rectangle::new(Vector::new(-0.125, -0.025), Vector::new(0.125, 0.025)),
         })
         .with(Input::new(Key::Q, Key::D))
-        .with(Score::new(|v| v.y < 0.0, Vector::new(2.0, 280.0)))
+        .with(Score::new(|v| v.y < 0.0, Vector::new(0.005, 0.75)))
         .build();
 
     // bottom paddle
     world
         .create_entity()
-        .with(Position::new(WIDTH as f64 * 0.5, 15.0))
-        .with(Velocity::new(Default::default(), 220.0))
+        .with(Position::new(0.5, 0.025))
+        .with(Velocity::new(Default::default(), 0.55))
         .with(Paddle {
-            bound: Rectangle::new(Vector::new(-50.0, -15.0), Vector::new(50.0, 15.0)),
+            bound: Rectangle::new(Vector::new(-0.125, -0.025), Vector::new(0.125, 0.025)),
         })
         .with(Input::new(Key::Left, Key::Right))
-        .with(Score::new(|v| v.y > HEIGHT as f64, Vector::new(2.0, 320.0)))
+        .with(Score::new(|v| v.y > 1.0, Vector::new(0.005, 0.45)))
         .build();
 
     while let Some(event) = events.next(&mut window) {
