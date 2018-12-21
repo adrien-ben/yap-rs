@@ -119,7 +119,9 @@ impl<'a> System<'a> for OutOfBound {
         }
 
         for (position, ball, velocity) in (&mut positions, &balls, &mut velocities).join() {
-            if position.current.x - ball.size * 0.5 < 0.0 || position.current.x + ball.size * 0.5 > 1.0 {
+            if position.current.x - ball.size * 0.5 < 0.0
+                || position.current.x + ball.size * 0.5 > 1.0
+            {
                 if position.current.x + ball.size * 0.5 < 0.0 {
                     position.current.x = ball.size * 0.5;
                 }
@@ -130,16 +132,16 @@ impl<'a> System<'a> for OutOfBound {
             }
         }
         for (position, paddle, velocity) in (&mut positions, &paddles, &mut velocities).join() {
-            if position.current.x + paddle.bound.top_right.x < 0.0
-                || position.current.x + paddle.bound.bottom_left.x > 1.0
+            if position.current.x + paddle.bound.bottom_left.x < 0.0
+                || position.current.x + paddle.bound.top_right.x > 1.0
             {
-                if position.current.x + paddle.bound.top_right.x < 0.0 {
+                if position.current.x + paddle.bound.bottom_left.x < 0.0 {
                     position.current.x = -paddle.bound.bottom_left.x;
                 }
-                if position.current.x + paddle.bound.bottom_left.x > 1.0 {
+                if position.current.x + paddle.bound.top_right.x > 1.0 {
                     position.current.x = 1.0 - paddle.bound.top_right.x;
                 }
-                velocity.direction.x *= -1.0;
+                velocity.direction.x = 0.0;
             }
         }
     }
@@ -284,14 +286,20 @@ impl<'a, 'b> System<'a> for Render<'b> {
             let glyphs = &mut self.glyphs;
 
             self.gl.draw(args.viewport(), |context, graphics| {
-                clear(BLACK, graphics);
+                clear(WHITE, graphics);
+                rectangle(
+                    BLACK,
+                    [0.0, 0.0, area.width, area.height],
+                    context.transform,
+                    graphics,
+                );
 
                 for (position, ball) in (&positions, &balls).join() {
                     ellipse(
                         WHITE,
                         [
                             -ball.size * 0.5 * area.width,
-                            -ball.size * 0.5 * area.height,
+                            -ball.size * 0.5 * area.width,
                             ball.size * area.width,
                             ball.size * area.width,
                         ],
@@ -323,12 +331,12 @@ impl<'a, 'b> System<'a> for Render<'b> {
                 for score in (&scores).join() {
                     let text_transform = context.transform.trans(
                         score.position.x * area.width,
-                        (1.0 - score.position.y) * area.height,
+                        (1.0 - score.position.y) * area.height + TEXT_SIZE as f64 * 0.5, 
                     );
                     text(
-                        TEXT_COLOR,
+                        BLACK,
                         TEXT_SIZE,
-                        &format!("Score: {}", score.current),
+                        &format!("{}", score.current),
                         glyphs,
                         text_transform,
                         graphics,

@@ -11,12 +11,14 @@ use pong::math::{Rectangle, Vector};
 use rand::random;
 use specs::prelude::*;
 
-const WIDTH: u32 = 200;
-const HEIGHT: u32 = 300;
+const WND_WIDTH: u32 = 250;
+const WND_HEIGHT: u32 = 300;
+const AREA_WIDTH: f64 = 200.0;
+const AREA_HEIGHT: f64 = 300.0;
 
 fn main() {
     let open_gl = OpenGL::V3_2;
-    let mut window: Window = WindowSettings::new("Pong", [WIDTH, HEIGHT])
+    let mut window: Window = WindowSettings::new("Pong", [WND_WIDTH, WND_HEIGHT])
         .opengl(open_gl)
         .exit_on_esc(true)
         .resizable(false)
@@ -26,14 +28,14 @@ fn main() {
 
     let mut world = World::new();
     world.add_resource(GameArea {
-        width: WIDTH as f64,
-        height: HEIGHT as f64,
+        width: AREA_WIDTH,
+        height: AREA_HEIGHT,
     });
     let mut dispatcher = DispatcherBuilder::new()
         .with(InputUpdate, "input_update", &[])
         .with(InputApply, "input_apply", &["input_update"])
-        .with(OutOfBound, "oob", &["input_apply"])
-        .with(Movement, "movement", &["oob"])
+        .with(Movement, "movement", &["input_apply"])
+        .with(OutOfBound, "oob", &["movement"])
         .with(CollisionDetection, "collision_detection", &["movement"])
         .with(
             CollisionResolution,
@@ -70,7 +72,7 @@ fn main() {
             bound: Rectangle::new(Vector::new(-0.125, -0.025), Vector::new(0.125, 0.025)),
         })
         .with(Input::new(Key::Q, Key::D))
-        .with(Score::new(|v| v.y < 0.0, Vector::new(0.005, 0.75)))
+        .with(Score::new(|v| v.y < 0.0, Vector::new(1.01, 0.95)))
         .build();
 
     // bottom paddle
@@ -82,7 +84,7 @@ fn main() {
             bound: Rectangle::new(Vector::new(-0.125, -0.025), Vector::new(0.125, 0.025)),
         })
         .with(Input::new(Key::Left, Key::Right))
-        .with(Score::new(|v| v.y > 1.0, Vector::new(0.005, 0.45)))
+        .with(Score::new(|v| v.y > 1.0, Vector::new(1.01, 0.05)))
         .build();
 
     while let Some(event) = events.next(&mut window) {
