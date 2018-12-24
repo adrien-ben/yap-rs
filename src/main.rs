@@ -7,7 +7,7 @@ use piston::event_loop::{EventLoop, EventSettings, Events};
 use piston::input::{Button, Key, PressEvent, ReleaseEvent, RenderEvent, UpdateEvent};
 use piston::window::WindowSettings;
 use pong::game::*;
-use pong::math::{Rectangle, Vector};
+use pong::math::Vector;
 use rand::random;
 use specs::prelude::*;
 
@@ -60,7 +60,8 @@ fn main() {
             speed: BALL_DEFAULT_SPEED,
             max_speed: 2.0,
         })
-        .with(Ball { size: 0.05 })
+        .with(Ball)
+        .with(Shape::Circle { radius: 0.025 })
         .build();
 
     // top paddle
@@ -68,8 +69,10 @@ fn main() {
         .create_entity()
         .with(Position::new(0.5, 0.975))
         .with(Velocity::new(Default::default(), 0.55))
-        .with(Paddle {
-            bound: Rectangle::new(Vector::new(-0.125, -0.025), Vector::new(0.125, 0.025)),
+        .with(Paddle)
+        .with(Shape::Rectangle {
+            width: 0.25,
+            height: 0.05,
         })
         .with(Input::new(Key::Q, Key::D))
         .with(Score::new(|v| v.y < 0.0, Vector::new(1.01, 0.95)))
@@ -80,8 +83,10 @@ fn main() {
         .create_entity()
         .with(Position::new(0.5, 0.025))
         .with(Velocity::new(Default::default(), 0.55))
-        .with(Paddle {
-            bound: Rectangle::new(Vector::new(-0.125, -0.025), Vector::new(0.125, 0.025)),
+        .with(Paddle)
+        .with(Shape::Rectangle {
+            width: 0.25,
+            height: 0.05,
         })
         .with(Input::new(Key::Left, Key::Right))
         .with(Score::new(|v| v.y > 1.0, Vector::new(1.01, 0.05)))

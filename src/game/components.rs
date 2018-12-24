@@ -1,4 +1,4 @@
-use crate::math::{Rectangle, Vector};
+use crate::math::Vector;
 use piston::input::Key;
 use specs::prelude::*;
 use specs_derive::*;
@@ -37,16 +37,19 @@ impl Velocity {
     }
 }
 
-#[derive(Component)]
-#[storage(VecStorage)]
-pub struct Ball {
-    pub size: f64,
-}
+#[derive(Component, Default)]
+#[storage(NullStorage)]
+pub struct Ball;
+
+#[derive(Component, Default)]
+#[storage(NullStorage)]
+pub struct Paddle;
 
 #[derive(Component)]
 #[storage(VecStorage)]
-pub struct Paddle {
-    pub bound: Rectangle,
+pub enum Shape {
+    Circle { radius: f64 },
+    Rectangle { width: f64, height: f64 },
 }
 
 #[derive(Component, Default)]

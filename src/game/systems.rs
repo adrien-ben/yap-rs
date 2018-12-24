@@ -108,40 +108,41 @@ impl<'a> System<'a> for OutOfBound {
     type SystemData = (
         Read<'a, GameState>,
         WriteStorage<'a, Position>,
-        ReadStorage<'a, Ball>,
-        ReadStorage<'a, Paddle>,
+        ReadStorage<'a, Shape>,
         WriteStorage<'a, Velocity>,
     );
 
-    fn run(&mut self, (state, mut positions, balls, paddles, mut velocities): Self::SystemData) {
+    fn run(&mut self, (state, mut positions, shapes, mut velocities): Self::SystemData) {
         if let GameState(State::Idle) = *state {
             return;
         }
 
-        for (position, ball, velocity) in (&mut positions, &balls, &mut velocities).join() {
-            if position.current.x - ball.size * 0.5 < 0.0
-                || position.current.x + ball.size * 0.5 > 1.0
-            {
-                if position.current.x + ball.size * 0.5 < 0.0 {
-                    position.current.x = ball.size * 0.5;
+        for (position, shape, velocity) in (&mut positions, &shapes, &mut velocities).join() {
+            match shape {
+                Shape::Circle { radius } => {
+                    if position.current.x - radius < 0.0 || position.current.x + radius > 1.0 {
+                        if position.current.x - radius < 0.0 {
+                            position.current.x = *radius;
+                        }
+                        if position.current.x + radius > 1.0 {
+                            position.current.x = 1.0 - radius;
+                        }
+                        velocity.direction.x *= -1.0;
+                    }
                 }
-                if position.current.x - ball.size * 0.5 > 1.0 {
-                    position.current.x = 1.0 - ball.size * 0.5;
+                Shape::Rectangle { width, .. } => {
+                    if position.current.x - width * 0.5 < 0.0
+                        || position.current.x + width * 0.5 > 1.0
+                    {
+                        if position.current.x - width * 0.5 < 0.0 {
+                            position.current.x = width * 0.5;
+                        }
+                        if position.current.x + width * 0.5 > 1.0 {
+                            position.current.x = 1.0 - width * 0.5;
+                        }
+                        velocity.direction.x = 0.0;
+                    }
                 }
-                velocity.direction.x *= -1.0;
-            }
-        }
-        for (position, paddle, velocity) in (&mut positions, &paddles, &mut velocities).join() {
-            if position.current.x + paddle.bound.bottom_left.x < 0.0
-                || position.current.x + paddle.bound.top_right.x > 1.0
-            {
-                if position.current.x + paddle.bound.bottom_left.x < 0.0 {
-                    position.current.x = -paddle.bound.bottom_left.x;
-                }
-                if position.current.x + paddle.bound.top_right.x > 1.0 {
-                    position.current.x = 1.0 - paddle.bound.top_right.x;
-                }
-                velocity.direction.x = 0.0;
             }
         }
     }
@@ -157,28 +158,33 @@ impl<'a> System<'a> for CollisionDetection {
         WriteStorage<'a, Collision>,
         ReadStorage<'a, Ball>,
         ReadStorage<'a, Paddle>,
+        ReadStorage<'a, Shape>,
     );
 
     fn run(
         &mut self,
-        (state, entities, positions, mut collisions, balls, paddles): Self::SystemData,
+        (state, entities, positions, mut collisions, balls, paddles, shapes): Self::SystemData,
     ) {
         if let GameState(State::Idle) = *state {
             return;
         }
 
-        for (entity, ball_pos, ball) in (&entities, &positions, &balls).join() {
-            for (paddle_pos, paddle) in (&positions, &paddles).join() {
+        for (entity, ball_pos, _, ball_shape) in (&entities, &positions, &balls, &shapes).join() {
+            if let Shape::Circle { radius } = ball_shape {
                 let circle = Circle {
                     center: ball_pos.current,
-                    radius: ball.size * 0.5,
+                    radius: *radius,
                 };
-                let rectangle = Rectangle::new(
-                    paddle_pos.current + paddle.bound.bottom_left,
-                    paddle_pos.current + paddle.bound.top_right,
-                );
-                if check_collision(rectangle, circle) {
-                    collisions.insert(entity, Collision).unwrap();
+                for (paddle_pos, _, paddle_shape) in (&positions, &paddles, &shapes).join() {
+                    if let Shape::Rectangle { width, height } = paddle_shape {
+                        let rectangle = Rectangle::new(
+                            paddle_pos.current + Vector::new(-width * 0.5, -height * 0.5),
+                            paddle_pos.current + Vector::new(width * 0.5, height * 0.5),
+                        );
+                        if check_collision(rectangle, circle) {
+                            collisions.insert(entity, Collision).unwrap();
+                        }
+                    }
                 }
             }
         }
@@ -273,15 +279,11 @@ impl<'a, 'b> System<'a> for Render<'b> {
         Read<'a, GameState>,
         Write<'a, RenderEvent>,
         ReadStorage<'a, Position>,
-        ReadStorage<'a, Ball>,
-        ReadStorage<'a, Paddle>,
+        ReadStorage<'a, Shape>,
         ReadStorage<'a, Score>,
     );
 
-    fn run(
-        &mut self,
-        (area, state, mut event, positions, balls, paddles, scores): Self::SystemData,
-    ) {
+    fn run(&mut self, (area, state, mut event, positions, shapes, scores): Self::SystemData) {
         if let Some(args) = event.0 {
             let glyphs = &mut self.glyphs;
 
@@ -294,44 +296,47 @@ impl<'a, 'b> System<'a> for Render<'b> {
                     graphics,
                 );
 
-                for (position, ball) in (&positions, &balls).join() {
-                    ellipse(
-                        WHITE,
-                        [
-                            -ball.size * 0.5 * area.width,
-                            -ball.size * 0.5 * area.width,
-                            ball.size * area.width,
-                            ball.size * area.width,
-                        ],
-                        context.transform.trans(
-                            position.current.x * area.width,
-                            (1.0 - position.current.y) * area.height,
-                        ),
-                        graphics,
-                    );
-                }
-
-                for (position, paddle) in (&positions, &paddles).join() {
-                    rectangle(
-                        WHITE,
-                        [
-                            paddle.bound.bottom_left.x * area.width,
-                            paddle.bound.bottom_left.y * area.height,
-                            paddle.bound.width() * area.width,
-                            paddle.bound.height() * area.height,
-                        ],
-                        context.transform.trans(
-                            position.current.x * area.width,
-                            (1.0 - position.current.y) * area.height,
-                        ),
-                        graphics,
-                    );
+                for (position, shape) in (&positions, &shapes).join() {
+                    match shape {
+                        Shape::Circle { radius } => {
+                            ellipse(
+                                WHITE,
+                                [
+                                    -radius * area.width,
+                                    -radius * area.width,
+                                    radius * 2.0 * area.width,
+                                    radius * 2.0 * area.width,
+                                ],
+                                context.transform.trans(
+                                    position.current.x * area.width,
+                                    (1.0 - position.current.y) * area.height,
+                                ),
+                                graphics,
+                            );
+                        }
+                        Shape::Rectangle { width, height } => {
+                            rectangle(
+                                WHITE,
+                                [
+                                    -width * 0.5 * area.width,
+                                    -height * 0.5 * area.height,
+                                    width * area.width,
+                                    height * area.height,
+                                ],
+                                context.transform.trans(
+                                    position.current.x * area.width,
+                                    (1.0 - position.current.y) * area.height,
+                                ),
+                                graphics,
+                            );
+                        }
+                    }
                 }
 
                 for score in (&scores).join() {
                     let text_transform = context.transform.trans(
                         score.position.x * area.width,
-                        (1.0 - score.position.y) * area.height + TEXT_SIZE as f64 * 0.5, 
+                        (1.0 - score.position.y) * area.height + TEXT_SIZE as f64 * 0.5,
                     );
                     text(
                         BLACK,
